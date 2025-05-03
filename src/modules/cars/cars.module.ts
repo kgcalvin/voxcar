@@ -8,5 +8,6 @@ import { CarListing } from '../../database/car-listing.entity'; // Adjust the im
   imports: [TypeOrmModule.forFeature([CarListing])],
   controllers: [CarsController],
   providers: [CarsService],
+  exports: [CarsService],
 })
 export class CarsModule {}
