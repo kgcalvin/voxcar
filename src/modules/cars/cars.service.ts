@@ -23,9 +23,9 @@ export class CarsService {
     });
   }
 
-  async findByListingUrl(listingUrl: string): Promise<CarListing | null> {
+  async findByListingUrl(listing_url: string): Promise<CarListing | null> {
     return this.carListingRepository.findOne({
-      where: { listingUrl },
+      where: { listing_url },
     });
   }
 

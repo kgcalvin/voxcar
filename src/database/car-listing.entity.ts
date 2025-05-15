@@ -12,62 +12,55 @@ export class CarListing {
   model: string;
 
   @Column()
-  year: number;
-
-  @Column('decimal', { precision: 10, scale: 2 })
-  price: number;
-
-  @Column('decimal', { precision: 10, scale: 2 })
-  priceWithAccessories: number;
+  year: string;
 
   @Column()
-  mileage: number;
-
-  @Column()
-  color: string;
+  type: string;
 
   @Column()
   fuelType: string;
 
   @Column()
-  fuelEfficiency: string;
+  transmission: string;
+
+  @Column()
+  price: string;
+
+  @Column()
+  mileage: string;
 
   @Column()
   engine: string;
 
   @Column()
-  transmission: string;
-
-  @Column({ nullable: true })
-  horsePower: number;
+  cylinders: string;
 
   @Column({ nullable: true })
   driveTrain: string;
-
-  @Column({ nullable: true })
-  interior: string;
 
   @Column()
   exterior: string;
 
   @Column()
-  cylinders: number;
+  interior: string;
 
-  @Column('simple-array')
-  imageUrls: string[];
-
-  @Column()
-  listingUrl: string;
+  @Column({ default: true })
+  isActive: boolean;
 
   @Column()
-  vin: string;
-
-  @Column()
-  stock: string;
+  listing_url: string;
 
   @Column('text')
   description: string;
 
-  @Column({ default: true })
-  isActive: boolean;
+  @Column('text')
+  location: string;
+
+  @Column('simple-array')
+  image_urls: string[];
+
+  // Additional fields That are unique for particular makes
+
+  @Column()
+  vin: string;
 }

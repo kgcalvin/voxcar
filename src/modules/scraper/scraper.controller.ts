@@ -4,7 +4,8 @@ import { ScraperService } from './scraper.service';
 interface WebhookPayload {
   scrapingjob_id?: string;
   status?: string;
-  // Add other fields that webscraper.io sends
+  sitemap_idstring;
+  sitemap_name: string;
 }
 
 @Controller('scraper')
@@ -21,15 +22,15 @@ export class ScraperController {
       `Received webhook for job ${payload?.scrapingjob_id} with status ${payload?.status}`,
     );
 
-    // if (payload.status === 'complted') {
-    //   try {
-    //     await this.scraperService.processScrapedData(payload.scrapingjob_id);
-    //     return { message: 'Data processed successfully' };
-    //   } catch (error) {
-    //     this.logger.error(`Error processing webhook data:`, error);
-    //     throw error;
-    //   }
-    // }
+    if (payload.status === 'finished' && payload.scrapingjob_id) {
+      try {
+        await this.scraperService.processScrapedData(payload.scrapingjob_id);
+        return { message: 'Data processed successfully' };
+      } catch (error) {
+        this.logger.error(`Error processing webhook data:`, error);
+        throw error;
+      }
+    }
 
     return { message: 'Webhook received but no action taken' };
   }

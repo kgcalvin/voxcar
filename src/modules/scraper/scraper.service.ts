@@ -3,14 +3,28 @@ import { CarsService } from '../cars/cars.service';
 import { CarListing } from '../../database/car-listing.entity';
 import { SlackService } from '../../common/services/slack.service';
 import axios from 'axios';
+import { ConfigService } from '@nestjs/config';
 
 interface ScrapedCarData {
-  url: string;
   make: string;
   model: string;
-  year: number;
-  price: number;
+  year: string;
+  price: string;
+  type: string;
+  transmission: string;
+  mileage: string;
+  engine: string;
+  driveTrain: string;
+  cylinders: string;
+  exterior: string;
+  interior: string;
+  listing_url: string;
+  description: string;
+  location: string;
+  image_urls: string;
+  fuelType: string;
   // Add other fields as needed
+  vin: string;
 }
 
 @Injectable()
@@ -21,15 +35,20 @@ export class ScraperService {
   constructor(
     private readonly carsService: CarsService,
     private readonly slackService: SlackService,
+    private readonly configService: ConfigService,
   ) {}
 
   async processScrapedData(jobId: string): Promise<void> {
     try {
       // Fetch scraped data from webscraper.io
-      const response = await axios.get(
-        `https://api.webscraper.io/api/v1/scraping-job/${jobId}/jsone`,
+      const response = await axios.get<string>(
+        `https://api.webscraper.io/api/v1/scraping-job/30614781/json?api_token=${this.configService.get('SCRAPER_API_TOKEN')}`,
       );
-      const scrapedData = response.data;
+      const lines = response.data.trim().split('\n');
+      const parsed = lines.map(
+        (line: string) => JSON.parse(line) as ScrapedCarData,
+      );
+      const scrapedData = parsed;
 
       // Check for empty data
       if (!scrapedData || scrapedData.length === 0) {
@@ -40,20 +59,22 @@ export class ScraperService {
       }
 
       // Process data based on the source (make)
-      const processedCars = await this.processDataByMake(scrapedData);
+      const processedCars = this.processDataByMake(scrapedData);
 
       // Handle deduplication and inactive cars
       await this.handleDeduplication(processedCars);
 
       // Save to database
       await this.saveProcessedCars(processedCars);
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(
         `Error processing scraped data for job ${jobId}:`,
         error,
       );
       await this.slackService.sendActionRequired(
-        `Error processing scraping job ${jobId}: ${error.message}`,
+        `Error processing scraping job ${jobId}: ${errorMessage}`,
       );
       throw error;
     }
@@ -71,12 +92,11 @@ export class ScraperService {
       }
 
       const currentListings = await this.carsService.findActiveByMake(make);
-      const currentUrls = new Set(currentListings.map((car) => car.listingUrl));
-      const newUrls = new Set(processedCars.map((car) => car.listingUrl));
+      const newUrls = new Set(processedCars.map((car) => car.listing_url));
 
       // Find cars that are no longer in the scraped data
       const carsToDeactivate = currentListings.filter(
-        (car) => !newUrls.has(car.listingUrl),
+        (car) => !newUrls.has(car.listing_url),
       );
 
       // Calculate inactivation percentage
@@ -107,99 +127,58 @@ export class ScraperService {
     }
   }
 
-  private async processDataByMake(
-    data: ScrapedCarData[],
-  ): Promise<Partial<CarListing>[]> {
+  private processDataByMake(data: ScrapedCarData[]): Partial<CarListing>[] {
     const processedCars: Partial<CarListing>[] = [];
 
     for (const item of data) {
-      // Determine the make from the URL or data
-      const make = this.determineMake(item.url);
-
-      // Process data based on make
-      const processedCar = await this.processCarData(make, item);
-      if (processedCar) {
-        processedCars.push(processedCar);
+      try {
+        const processedCar = this.processData(item);
+        if (processedCar) {
+          processedCars.push(processedCar);
+        }
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error(
+          `Error processing car data for make ${item.make}: ${errorMessage}`,
+        );
       }
     }
 
     return processedCars;
   }
 
-  private determineMake(url: string): string {
-    // Implement logic to determine make from URL
-    if (url.includes('bmw')) return 'BMW';
-    if (url.includes('mazda')) return 'Mazda';
-    if (url.includes('audi')) return 'Audi';
-    return 'Unknown';
-  }
-
-  private async processCarData(
-    make: string,
-    data: ScrapedCarData,
-  ): Promise<Partial<CarListing> | null> {
-    try {
-      // Process data based on make
-      switch (make.toLowerCase()) {
-        case 'bmw':
-          return this.processBmwData(data);
-        case 'mazda':
-          return this.processMazdaData(data);
-        case 'audi':
-          return this.processAudiData(data);
-        default:
-          this.logger.warn(`No processor found for make: ${make}`);
-          return null;
-      }
-    } catch (error) {
-      this.logger.error(`Error processing car data for make ${make}:`, error);
-      return null;
-    }
-  }
-
-  private processBmwData(data: ScrapedCarData): Partial<CarListing> {
+  private processData(data: ScrapedCarData): Partial<CarListing> {
+    // engine| DriveTrain| Cylinders
     return {
-      make: 'BMW',
+      make: data.make,
       model: data.model,
       year: data.year,
+      type: data.type,
+      fuelType: data.fuelType,
+      transmission: data.transmission,
       price: data.price,
-      listingUrl: data.url,
-      isActive: true,
-      // ... other fields
-    };
-  }
-
-  private processMazdaData(data: ScrapedCarData): Partial<CarListing> {
-    return {
-      make: 'Mazda',
-      model: data.model,
-      year: data.year,
-      price: data.price,
-      listingUrl: data.url,
-      isActive: true,
-      // ... other fields
-    };
-  }
-
-  private processAudiData(data: ScrapedCarData): Partial<CarListing> {
-    return {
-      make: 'Audi',
-      model: data.model,
-      year: data.year,
-      price: data.price,
-      listingUrl: data.url,
-      isActive: true,
-      // ... other fields
+      mileage: data.mileage,
+      engine: data.engine,
+      driveTrain: data.driveTrain,
+      cylinders: data.cylinders,
+      exterior: data.exterior,
+      interior: data.interior,
+      listing_url: data.listing_url,
+      description: data.description,
+      location: data.location,
+      image_urls: data.image_urls ? data.image_urls.split('|') : [],
+      // ... other unique fields
     };
   }
 
   private async saveProcessedCars(cars: Partial<CarListing>[]): Promise<void> {
     for (const car of cars) {
       try {
-        if (!car.listingUrl) continue;
+        if (!car.listing_url) continue;
         // Check if car already exists
         const existingCar = await this.carsService.findByListingUrl(
-          car.listingUrl,
+          car.listing_url,
         );
         if (existingCar) {
           // Update existing car
