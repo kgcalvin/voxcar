@@ -56,6 +56,9 @@ export class CarListing {
   @Column('text')
   location: string;
 
+  @Column('text')
+  condition: string;
+
   @Column('simple-array')
   image_urls: string[];
 

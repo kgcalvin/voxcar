@@ -23,7 +23,7 @@ interface ScrapedCarData {
   location: string;
   image_urls: string;
   fuelType: string;
-  // Add other fields as needed
+  condition: string;
   vin: string;
 }
 
@@ -42,7 +42,7 @@ export class ScraperService {
     try {
       // Fetch scraped data from webscraper.io
       const response = await axios.get<string>(
-        `https://api.webscraper.io/api/v1/scraping-job/30614781/json?api_token=${this.configService.get('SCRAPER_API_TOKEN')}`,
+        `https://api.webscraper.io/api/v1/scraping-job/${jobId}/json?api_token=${this.configService.get('SCRAPER_API_TOKEN')}`,
       );
       const lines = response.data.trim().split('\n');
       const parsed = lines.map(
@@ -119,10 +119,12 @@ export class ScraperService {
       this.logger.log(
         `Deduplication complete for ${make}. ${carsToDeactivate.length} cars deactivated.`,
       );
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Error during deduplication:', error);
       await this.slackService.sendAlert(
-        `Error during deduplication: ${error.message}`,
+        `Error during deduplication: ${errorMessage}`,
       );
     }
   }
@@ -130,11 +132,19 @@ export class ScraperService {
   private processDataByMake(data: ScrapedCarData[]): Partial<CarListing>[] {
     const processedCars: Partial<CarListing>[] = [];
 
-    for (const item of data) {
+    // Filter out cars without listing_url first
+    const validCars = data.filter((car) => car.listing_url);
+
+    for (const item of validCars) {
       try {
         const processedCar = this.processData(item);
         if (processedCar) {
           processedCars.push(processedCar);
+        }
+        if (!processedCar.image_urls && processedCar.image_urls!.length == 0) {
+          this.logger.log(
+            `Processed car for make ${item.listing_url} has no images`,
+          );
         }
       } catch (error: unknown) {
         const errorMessage =
@@ -168,6 +178,8 @@ export class ScraperService {
       description: data.description,
       location: data.location,
       image_urls: data.image_urls ? data.image_urls.split('|') : [],
+      vin: data.vin,
+      condition: data.condition,
       // ... other unique fields
     };
   }
