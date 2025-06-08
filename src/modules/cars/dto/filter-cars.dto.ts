@@ -1,6 +1,6 @@
 export class FilterCarsDto {
-  page: number = 1;
-  limit: number = 10;
+  page: number;
+  limit: number;
 
   active?: boolean;
   condition?: string;
