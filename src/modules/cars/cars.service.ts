@@ -24,6 +24,10 @@ export class CarsService {
   ): Promise<PaginatedResponse<CarListing>> {
     const where: FindOptionsWhere<CarListing> = {};
 
+    // Set default values for pagination
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+
     if (filters.active !== undefined) where.isActive = filters.active;
     if (filters.condition) where.condition = filters.condition;
     if (filters.year) where.year = filters.year;
@@ -56,16 +60,16 @@ export class CarsService {
         vin: true,
       },
       where,
-      skip: (filters.page - 1) * filters.limit,
-      take: filters.limit,
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
     return {
       data: cars,
       total,
-      page: filters.page,
-      limit: filters.limit,
-      totalPages: Math.ceil(total / filters.limit),
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     };
   }
 

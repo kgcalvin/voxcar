@@ -2,7 +2,6 @@ import { Controller, Get, Query, Param } from '@nestjs/common';
 import { CarsService } from './cars.service';
 import { CarListing } from '../../database/car-listing.entity';
 import { FilterCarsDto } from './dto/filter-cars.dto';
-import { plainToInstance } from 'class-transformer';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -18,9 +17,8 @@ export class CarsController {
 
   @Get()
   async findAll(
-    @Query() query: Record<string, any>,
+    @Query() filters: FilterCarsDto,
   ): Promise<PaginatedResponse<CarListing>> {
-    const filters = plainToInstance(FilterCarsDto, query);
     return this.carsService.findAll(filters);
   }
 
