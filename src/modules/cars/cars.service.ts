@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsWhere } from 'typeorm';
 import { CarListing } from '../../database/car-listing.entity';
+import { FilterCarsDto } from './dto/filter-cars.dto';
 
 @Injectable()
 export class CarsService {
@@ -10,7 +11,18 @@ export class CarsService {
     private readonly carListingRepository: Repository<CarListing>,
   ) {}
 
-  async findAll(): Promise<CarListing[]> {
+  async findAll(filters?: FilterCarsDto): Promise<CarListing[]> {
+    const where: FindOptionsWhere<CarListing> = {};
+
+    if (filters) {
+      if (filters.active) where.isActive = filters.active;
+      if (filters.condition) where.condition = filters.condition;
+      if (filters.year) where.year = filters.year;
+      if (filters.make) where.make = filters.make;
+      if (filters.location) where.location = filters.location;
+      if (filters.type) where.type = filters.type;
+    }
+
     return this.carListingRepository.find({
       select: {
         id: true,
@@ -35,6 +47,7 @@ export class CarsService {
         image_urls: true,
         vin: true,
       },
+      where,
     });
   }
 
