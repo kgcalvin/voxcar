@@ -18,7 +18,7 @@ export class CarListing {
   type: string;
 
   @Column()
-  fuelType: string;
+  fuel_type: string;
 
   @Column()
   transmission: string;
@@ -36,7 +36,7 @@ export class CarListing {
   cylinders: string;
 
   @Column({ nullable: true })
-  driveTrain: string;
+  drive_train: string;
 
   @Column()
   exterior: string;

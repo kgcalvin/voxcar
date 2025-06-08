@@ -6,25 +6,25 @@ import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 
 interface ScrapedCarData {
-  make: string;
-  model: string;
-  year: string;
-  price: string;
-  type: string;
-  transmission: string;
-  mileage: string;
-  engine: string;
-  driveTrain: string;
-  cylinders: string;
-  exterior: string;
-  interior: string;
-  listing_url: string;
-  description: string;
-  location: string;
-  image_urls: string;
-  fuelType: string;
-  condition: string;
-  vin: string;
+  make?: string;
+  model?: string;
+  year?: string;
+  price?: string;
+  type?: string;
+  transmission?: string;
+  mileage?: string;
+  engine?: string;
+  cylinders?: string;
+  exterior?: string;
+  interior?: string;
+  listing_url?: string;
+  description?: string;
+  location?: string;
+  image_urls?: string;
+  condition?: string;
+  vin?: string;
+  drive_train?: string;
+  fuel_type?: string;
 }
 
 @Injectable()
@@ -37,8 +37,7 @@ export class ScraperService {
     private readonly slackService: SlackService,
     private readonly configService: ConfigService,
   ) {}
-
-  async processScrapedData(jobId: string): Promise<void> {
+  async processScrapedCars(jobId: string): Promise<void> {
     try {
       // Fetch scraped data from webscraper.io
       const response = await axios.get<string>(
@@ -48,24 +47,23 @@ export class ScraperService {
       const parsed = lines.map(
         (line: string) => JSON.parse(line) as ScrapedCarData,
       );
-      const scrapedData = parsed;
 
       // Check for empty data
-      if (!scrapedData || scrapedData.length === 0) {
+      if (!parsed || parsed.length === 0) {
         await this.slackService.sendActionRequired(
           `Scraping job ${jobId} returned empty data. Please investigate.`,
         );
         return;
       }
 
-      // Process data based on the source (make)
-      const processedCars = this.processDataByMake(scrapedData);
+      // Process data to make it compatible with CarListing schema
+      const processedCars = this._cleanScrapedData(parsed, jobId);
 
       // Handle deduplication and inactive cars
-      await this.handleDeduplication(processedCars);
+      void this._handleCarDeactivation(processedCars, jobId);
 
       // Save to database
-      await this.saveProcessedCars(processedCars);
+      void this._saveProcessedCars(processedCars);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -80,68 +78,25 @@ export class ScraperService {
     }
   }
 
-  private async handleDeduplication(
-    processedCars: Partial<CarListing>[],
-  ): Promise<void> {
-    try {
-      // Get all current active listings for the make
-      const make = processedCars[0]?.make;
-      if (!make) {
-        this.logger.warn('No make found in processed cars');
-        return;
-      }
-
-      const currentListings = await this.carsService.findActiveByMake(make);
-      const newUrls = new Set(processedCars.map((car) => car.listing_url));
-
-      // Find cars that are no longer in the scraped data
-      const carsToDeactivate = currentListings.filter(
-        (car) => !newUrls.has(car.listing_url),
-      );
-
-      // Calculate inactivation percentage
-      const inactivationPercentage =
-        carsToDeactivate.length / currentListings.length;
-
-      // If more than 85% of cars are being deactivated, send alert
-      if (inactivationPercentage > this.INACTIVATION_THRESHOLD) {
-        await this.slackService.sendActionRequired(
-          `High number of cars being deactivated for ${make}. ${inactivationPercentage * 100}% of listings are being marked as inactive. Please verify scraping Job.`,
-        );
-      }
-
-      // Deactivate cars that are no longer in the scraped data
-      for (const car of carsToDeactivate) {
-        await this.carsService.update(car.id, { isActive: false });
-      }
-
-      // Log deduplication results
-      this.logger.log(
-        `Deduplication complete for ${make}. ${carsToDeactivate.length} cars deactivated.`,
-      );
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error('Error during deduplication:', error);
-      await this.slackService.sendAlert(
-        `Error during deduplication: ${errorMessage}`,
-      );
-    }
-  }
-
-  private processDataByMake(data: ScrapedCarData[]): Partial<CarListing>[] {
+  private _cleanScrapedData(
+    data: ScrapedCarData[],
+    jobId: string,
+  ): Partial<CarListing>[] {
     const processedCars: Partial<CarListing>[] = [];
+    const carsFailedToProcess: ScrapedCarData[] = [];
+    const carsWithNoImages: ScrapedCarData[] = [];
 
     // Filter out cars without listing_url first
     const validCars = data.filter((car) => car.listing_url);
 
     for (const item of validCars) {
       try {
-        const processedCar = this.processData(item);
+        const processedCar = this._mapToCarListingSchema(item);
         if (processedCar) {
           processedCars.push(processedCar);
         }
-        if (!processedCar.image_urls && processedCar.image_urls!.length == 0) {
+        if (processedCar && processedCar.image_urls!.length == 0) {
+          carsWithNoImages.push(item);
           this.logger.log(
             `Processed car for make ${item.listing_url} has no images`,
           );
@@ -152,39 +107,103 @@ export class ScraperService {
         this.logger.error(
           `Error processing car data for make ${item.make}: ${errorMessage}`,
         );
+        carsFailedToProcess.push(item);
       }
+    }
+    if (carsFailedToProcess.length > 0) {
+      void this.slackService.sendActionRequired(
+        `The following scraped cars with urls: ${carsFailedToProcess.map((item: ScrapedCarData) => item.listing_url).join(',')} cars. 
+        Please check the webscraper.io jobid with value ${jobId} for details.`,
+      );
+    }
+
+    if (carsWithNoImages.length > 0) {
+      void this.slackService.sendActionRequired(
+        `The following scraped cars with urls: ${carsWithNoImages.map((item: ScrapedCarData) => item.listing_url).join(',')} have been scrapped with no images.
+         Please check the webscraper.io jobid with value ${jobId} for details.`,
+      );
     }
 
     return processedCars;
   }
 
-  private processData(data: ScrapedCarData): Partial<CarListing> {
-    // engine| DriveTrain| Cylinders
+  private _mapToCarListingSchema(data: ScrapedCarData): Partial<CarListing> {
     return {
-      make: data.make,
+      make: data.make?.toUpperCase(),
       model: data.model,
       year: data.year,
-      type: data.type,
-      fuelType: data.fuelType,
+      type: data.type?.toUpperCase(),
       transmission: data.transmission,
       price: data.price,
       mileage: data.mileage,
       engine: data.engine,
-      driveTrain: data.driveTrain,
       cylinders: data.cylinders,
       exterior: data.exterior,
       interior: data.interior,
       listing_url: data.listing_url,
       description: data.description,
-      location: data.location,
+      location: data.location?.toUpperCase(),
       image_urls: data.image_urls ? data.image_urls.split('|') : [],
       vin: data.vin,
-      condition: data.condition,
+      condition: data.condition?.toUpperCase(),
+      drive_train: data.drive_train,
+      fuel_type: data.fuel_type,
       // ... other unique fields
     };
   }
 
-  private async saveProcessedCars(cars: Partial<CarListing>[]): Promise<void> {
+  private async _handleCarDeactivation(
+    processedCars: Partial<CarListing>[],
+    jobId: string,
+  ): Promise<void> {
+    // Get all current active listings for the make
+
+    const make = processedCars[0].make;
+    const condition = processedCars[0].condition;
+    const location = processedCars[0].location;
+    if (!make || !condition || !location) {
+      throw new Error(
+        `Deduplication failed Please verify scraping Job ${jobId}. on webscraper.io.`,
+      );
+    }
+
+    const currentListings = await this.carsService.findActiveExistingCars(
+      make,
+      condition,
+      location,
+    );
+    const newUrls = new Set(processedCars.map((car) => car.listing_url));
+
+    // Find cars that are no longer in the scraped data
+    const carsToDeactivate = currentListings.filter(
+      (car) => !newUrls.has(car.listing_url),
+    );
+
+    // Calculate inactivation percentage
+    const inactivationPercentage =
+      carsToDeactivate.length / currentListings.length;
+
+    // If more than 85% of cars are being deactivated, send alert
+    if (inactivationPercentage > this.INACTIVATION_THRESHOLD) {
+      // THrow an error to stop the process
+      throw new Error(
+        `High number of cars being deactivated for . ${inactivationPercentage * 100}% of listings are being marked as inactive.
+         Please verify scraping Job. ${jobId} on webscraper.io.`,
+      );
+    }
+
+    // Deactivate cars that are no longer in the scraped data
+    for (const car of carsToDeactivate) {
+      await this.carsService.update(car.id, { isActive: false });
+    }
+
+    // Log deduplication results
+    this.logger.log(
+      `Deduplication complete for . ${carsToDeactivate.length} cars deactivated.`,
+    );
+  }
+
+  private async _saveProcessedCars(cars: Partial<CarListing>[]): Promise<void> {
     for (const car of cars) {
       try {
         if (!car.listing_url) continue;
