@@ -87,7 +87,7 @@ export class ScraperService {
     const carsWithNoImages: ScrapedCarData[] = [];
 
     // Filter out cars without listing_url first
-    const validCars = data.filter((car) => car.listing_url);
+    const validCars = data.filter((car) => car.listing_url && car.year);
 
     for (const item of validCars) {
       try {
@@ -128,6 +128,11 @@ export class ScraperService {
   }
 
   private _mapToCarListingSchema(data: ScrapedCarData): Partial<CarListing> {
+    const currentYear = new Date().getFullYear();
+    const carYear = parseInt(data.year || '0');
+    const condition =
+      carYear >= currentYear - 1 ? data.condition?.toUpperCase() : 'USED';
+
     return {
       make: data.make?.toUpperCase(),
       model: data.model,
@@ -145,10 +150,9 @@ export class ScraperService {
       location: data.location?.toUpperCase(),
       image_urls: data.image_urls ? data.image_urls.split('|') : [],
       vin: data.vin,
-      condition: data.condition?.toUpperCase(),
+      condition: condition,
       drive_train: data.drive_train,
       fuel_type: data.fuel_type,
-      // ... other unique fields
     };
   }
 

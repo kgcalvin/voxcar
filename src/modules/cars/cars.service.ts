@@ -4,6 +4,14 @@ import { Repository, FindOptionsWhere } from 'typeorm';
 import { CarListing } from '../../database/car-listing.entity';
 import { FilterCarsDto } from './dto/filter-cars.dto';
 
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 @Injectable()
 export class CarsService {
   constructor(
@@ -11,19 +19,19 @@ export class CarsService {
     private readonly carListingRepository: Repository<CarListing>,
   ) {}
 
-  async findAll(filters?: FilterCarsDto): Promise<CarListing[]> {
+  async findAll(
+    filters: FilterCarsDto,
+  ): Promise<PaginatedResponse<CarListing>> {
     const where: FindOptionsWhere<CarListing> = {};
 
-    if (filters) {
-      if (filters.active) where.isActive = filters.active;
-      if (filters.condition) where.condition = filters.condition;
-      if (filters.year) where.year = filters.year;
-      if (filters.make) where.make = filters.make;
-      if (filters.location) where.location = filters.location;
-      if (filters.type) where.type = filters.type;
-    }
+    if (filters.active !== undefined) where.isActive = filters.active;
+    if (filters.condition) where.condition = filters.condition;
+    if (filters.year) where.year = filters.year;
+    if (filters.make) where.make = filters.make;
+    if (filters.location) where.location = filters.location;
+    if (filters.type) where.type = filters.type;
 
-    return this.carListingRepository.find({
+    const [cars, total] = await this.carListingRepository.findAndCount({
       select: {
         id: true,
         make: true,
@@ -48,7 +56,17 @@ export class CarsService {
         vin: true,
       },
       where,
+      skip: (filters.page - 1) * filters.limit,
+      take: filters.limit,
     });
+
+    return {
+      data: cars,
+      total,
+      page: filters.page,
+      limit: filters.limit,
+      totalPages: Math.ceil(total / filters.limit),
+    };
   }
 
   async findActiveExistingCars(

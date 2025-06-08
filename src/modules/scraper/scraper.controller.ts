@@ -25,7 +25,7 @@ export class ScraperController {
     if (payload.status === 'finished' && payload.scrapingjob_id) {
       try {
         await this.scraperService.processScrapedCars(payload.scrapingjob_id);
-        return { message: 'Data processed successfully' };
+        return { message: 'Data recieved successfully' };
       } catch (error) {
         this.logger.error(`Error processing webhook data:`, error);
         throw error;
