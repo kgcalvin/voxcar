@@ -156,4 +156,39 @@ export class CarsService {
     }
     return updatedCar;
   }
+
+  async findOne(id: string): Promise<CarListing> {
+    const car = await this.carListingRepository.findOne({
+      select: {
+        id: true,
+        make: true,
+        model: true,
+        year: true,
+        type: true,
+        fuel_type: true,
+        transmission: true,
+        price: true,
+        mileage: true,
+        engine: true,
+        cylinders: true,
+        drive_train: true,
+        exterior: true,
+        interior: true,
+        isActive: true,
+        listing_url: true,
+        description: true,
+        location: true,
+        condition: true,
+        image_urls: true,
+        vin: true,
+      },
+      where: { id },
+    });
+
+    if (!car) {
+      throw new NotFoundException(`Car with ID ${id} not found`);
+    }
+
+    return car;
+  }
 }
