@@ -24,7 +24,7 @@ export class CarsService {
   ): Promise<PaginatedResponse<CarListing>> {
     const where: FindOptionsWhere<CarListing> = {};
 
-    // Set default values for pagination
+    // Set default value for pagination
     const page = filters.page || 1;
     const limit = filters.limit || 10;
 
