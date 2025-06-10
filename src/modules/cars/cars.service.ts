@@ -28,7 +28,7 @@ export class CarsService {
     const page = filters.page || 1;
     const limit = filters.limit || 10;
 
-    if (filters.active !== undefined) where.isActive = filters.active;
+    if (filters.active) where.isActive = filters.active;
     if (filters.condition) where.condition = filters.condition;
     if (filters.year) where.year = filters.year;
     if (filters.make) where.make = filters.make;

@@ -5,7 +5,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Configure CORS
   app.enableCors({
-    origin: ['http://localhost:3000', 'https://voxcar-7b14f.web.app'],
+    origin: [
+      'http://localhost:3000',
+      'https://voxcar-7b14f.web.app',
+      'https://voxcar-fe-ska6.vercel.app',
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: '*',
     credentials: true,
