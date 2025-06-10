@@ -213,4 +213,43 @@ export class CarsService {
 
     return car;
   }
+
+  async getUniqueFilters(): Promise<{
+    locations: string[];
+    types: string[];
+    makes: string[];
+    years: string[];
+  }> {
+    const [locations, types, makes, years] = await Promise.all([
+      this.carListingRepository
+        .createQueryBuilder('car')
+        .select('DISTINCT car.location', 'location')
+        .where('car.isActive = :isActive', { isActive: true })
+        .getRawMany(),
+      this.carListingRepository
+        .createQueryBuilder('car')
+        .select('DISTINCT car.type', 'type')
+        .where('car.isActive = :isActive', { isActive: true })
+        .getRawMany(),
+      this.carListingRepository
+        .createQueryBuilder('car')
+        .select('DISTINCT car.make', 'make')
+        .where('car.isActive = :isActive', { isActive: true })
+        .getRawMany(),
+      this.carListingRepository
+        .createQueryBuilder('car')
+        .select('DISTINCT car.year', 'year')
+        .where('car.isActive = :isActive', { isActive: true })
+        .getRawMany(),
+    ]);
+
+    return {
+      locations: locations
+        .map((l: { location: string }) => l.location)
+        .filter(Boolean),
+      types: types.map((t: { type: string }) => t.type).filter(Boolean),
+      makes: makes.map((m: { make: string }) => m.make).filter(Boolean),
+      years: years.map((y: { year: string }) => y.year).filter(Boolean),
+    };
+  }
 }

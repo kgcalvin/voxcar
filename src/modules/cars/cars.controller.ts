@@ -22,6 +22,16 @@ export class CarsController {
     return this.carsService.findAll(filters);
   }
 
+  @Get('filters')
+  async getUniqueFilters(): Promise<{
+    locations: string[];
+    types: string[];
+    makes: string[];
+    years: string[];
+  }> {
+    return this.carsService.getUniqueFilters();
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<CarListing> {
     return this.carsService.findOne(id);
