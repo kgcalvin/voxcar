@@ -85,9 +85,6 @@ export class ScraperService {
     const processedCars: Partial<CarListing>[] = [];
     const carsFailedToProcess: ScrapedCarData[] = [];
     const carsWithNoImages: ScrapedCarData[] = [];
-    void this.slackService.sendNotification(
-      `Scrapper with ID ${jobId} has started`,
-    );
 
     // Filter out cars without listing_url first
     const validCars = data.filter((car) => car.listing_url && car.year);
@@ -116,15 +113,33 @@ export class ScraperService {
     }
     if (carsFailedToProcess.length > 0) {
       void this.slackService.sendNotification(
-        `The following scraped cars with urls: ${carsFailedToProcess.map((item: ScrapedCarData) => item.listing_url).join(',')} cars. 
-        Please check the webscraper.io jobid with value ${jobId} for details.`,
+        `⚠️ *Scraping Issues Detected*\n` +
+          `*${carsFailedToProcess.length}* cars failed to process.\n` +
+          `*Affected URLs:*\n` +
+          carsFailedToProcess
+            .map(
+              (item: ScrapedCarData) =>
+                `• <${item.listing_url}|${item.make || 'Unknown'} ${item.model || ''}>`,
+            )
+            .join('\n') +
+          '\n\n' +
+          `Please check the webscraper.io job with ID: *${jobId}* for details.`,
       );
     }
 
     if (carsWithNoImages.length > 0) {
       void this.slackService.sendNotification(
-        `The following scraped ${carsWithNoImages.length} cars with urls: ${carsWithNoImages.map((item: ScrapedCarData) => item.listing_url).join(',')} have been scrapped with no images.
-         Please check the webscraper.io jobid with value ${jobId} for details.`,
+        `📸 *Missing Images Alert*\n` +
+          `*${carsWithNoImages.length}* cars were scraped without images.\n` +
+          `*Affected Listings:*\n` +
+          carsWithNoImages
+            .map(
+              (item: ScrapedCarData) =>
+                `• <${item.listing_url}|${item.make || 'Unknown'} ${item.model || ''}>`,
+            )
+            .join('\n') +
+          '\n\n' +
+          `Please check the webscraper.io job with ID: *${jobId}* for details.`,
       );
     }
 

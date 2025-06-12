@@ -1,29 +1,67 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 
+interface SlackBlock {
+  type: string;
+  text?: {
+    type: string;
+    text: string;
+  };
+  elements?: Array<{
+    type: string;
+    text?: string;
+    url?: string;
+  }>;
+  image_url?: string;
+  alt_text?: string;
+}
+
+interface SlackMessage {
+  blocks?: SlackBlock[];
+  text?: string;
+}
+
 @Injectable()
 export class SlackService {
   private readonly logger = new Logger(SlackService.name);
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async sendNotification(message: string): Promise<void> {
-    // TODO: Implement actual Slack integration
-    // 1. Set up Slack webhook URL in environment variables
-    // 2. Use axios to send POST request to Slack webhook
-    // 3. Format message with proper Slack formatting and @mentions
-    this.logger.error(`[SLACK SEND ACTION] ${message}`);
-    void this._slacker(message);
+  async sendNotification(message: string, imageUrls?: string[]): Promise<void> {
+    const blocks: SlackBlock[] = [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: message,
+        },
+      },
+    ];
+
+    // Add image blocks if imageUrls are provided
+    if (imageUrls && imageUrls.length > 0) {
+      imageUrls.forEach((url) => {
+        blocks.push({
+          type: 'image',
+          image_url: url,
+          alt_text: 'Car image',
+        });
+      });
+    }
+
+    const slackMessage: SlackMessage = {
+      blocks,
+      text: message, // Fallback text for clients that don't support blocks
+    };
+
+    await this._slacker(slackMessage);
   }
 
   private async _slacker(
-    text: string,
+    message: SlackMessage,
     webHookURL = 'https://hooks.slack.com/services/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',
   ) {
     try {
       if (!webHookURL) return;
-      await axios.post(webHookURL, {
-        text: `${text}`,
-      });
+      await axios.post(webHookURL, message);
     } catch (error) {
       console.error('Slack post error: ', error);
     }
