@@ -50,7 +50,7 @@ export class ScraperService {
 
       // Check for empty data
       if (!parsed || parsed.length === 0) {
-        await this.slackService.sendActionRequired(
+        await this.slackService.sendNotification(
           `Scraping job ${jobId} returned empty data. Please investigate.`,
         );
         return;
@@ -71,7 +71,7 @@ export class ScraperService {
         `Error processing scraped data for job ${jobId}:`,
         error,
       );
-      await this.slackService.sendActionRequired(
+      await this.slackService.sendNotification(
         `Error processing scraping job ${jobId}: ${errorMessage}`,
       );
       throw error;
@@ -85,6 +85,9 @@ export class ScraperService {
     const processedCars: Partial<CarListing>[] = [];
     const carsFailedToProcess: ScrapedCarData[] = [];
     const carsWithNoImages: ScrapedCarData[] = [];
+    void this.slackService.sendNotification(
+      `Scrapper with ID ${jobId} has started`,
+    );
 
     // Filter out cars without listing_url first
     const validCars = data.filter((car) => car.listing_url && car.year);
@@ -92,14 +95,15 @@ export class ScraperService {
     for (const item of validCars) {
       try {
         const processedCar = this._mapToCarListingSchema(item);
-        if (processedCar) {
-          processedCars.push(processedCar);
-        }
         if (processedCar && processedCar.image_urls!.length == 0) {
           carsWithNoImages.push(item);
           this.logger.log(
             `Processed car for make ${item.listing_url} has no images`,
           );
+          continue;
+        }
+        if (processedCar) {
+          processedCars.push(processedCar);
         }
       } catch (error: unknown) {
         const errorMessage =
@@ -111,15 +115,15 @@ export class ScraperService {
       }
     }
     if (carsFailedToProcess.length > 0) {
-      void this.slackService.sendActionRequired(
+      void this.slackService.sendNotification(
         `The following scraped cars with urls: ${carsFailedToProcess.map((item: ScrapedCarData) => item.listing_url).join(',')} cars. 
         Please check the webscraper.io jobid with value ${jobId} for details.`,
       );
     }
 
     if (carsWithNoImages.length > 0) {
-      void this.slackService.sendActionRequired(
-        `The following scraped cars with urls: ${carsWithNoImages.map((item: ScrapedCarData) => item.listing_url).join(',')} have been scrapped with no images.
+      void this.slackService.sendNotification(
+        `The following scraped ${carsWithNoImages.length} cars with urls: ${carsWithNoImages.map((item: ScrapedCarData) => item.listing_url).join(',')} have been scrapped with no images.
          Please check the webscraper.io jobid with value ${jobId} for details.`,
       );
     }
