@@ -24,35 +24,58 @@ interface SlackMessage {
 @Injectable()
 export class SlackService {
   private readonly logger = new Logger(SlackService.name);
+  private readonly MAX_BLOCKS_PER_MESSAGE = 50; // Slack's recommended limit
 
   async sendNotification(message: string, imageUrls?: string[]): Promise<void> {
-    const blocks: SlackBlock[] = [
-      {
+    try {
+      // Split message into sections if it contains newlines
+      const messageSections = message
+        .split('\n')
+        .filter((section) => section.trim());
+
+      // Create blocks for the message
+      const blocks: SlackBlock[] = messageSections.map((section) => ({
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: message,
+          text: section,
         },
-      },
-    ];
+      }));
 
-    // Add image blocks if imageUrls are provided
-    if (imageUrls && imageUrls.length > 0) {
-      imageUrls.forEach((url) => {
-        blocks.push({
-          type: 'image',
-          image_url: url,
-          alt_text: 'Car image',
+      // Add image blocks if imageUrls are provided
+      if (imageUrls && imageUrls.length > 0) {
+        imageUrls.forEach((url) => {
+          blocks.push({
+            type: 'image',
+            image_url: url,
+            alt_text: 'Car image',
+          });
         });
-      });
+      }
+
+      // Split blocks into chunks if they exceed the limit
+      const blockChunks = this._chunkArray(blocks, this.MAX_BLOCKS_PER_MESSAGE);
+
+      // Send each chunk as a separate message
+      for (const chunk of blockChunks) {
+        const slackMessage: SlackMessage = {
+          blocks: chunk,
+          text: message, // Fallback text for clients that don't support blocks
+        };
+
+        await this._slacker(slackMessage);
+      }
+    } catch (error) {
+      this.logger.error('Error sending Slack notification:', error);
     }
+  }
 
-    const slackMessage: SlackMessage = {
-      blocks,
-      text: message, // Fallback text for clients that don't support blocks
-    };
-
-    await this._slacker(slackMessage);
+  private _chunkArray<T>(array: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
   }
 
   private async _slacker(
@@ -63,7 +86,7 @@ export class SlackService {
       if (!webHookURL) return;
       await axios.post(webHookURL, message);
     } catch (error) {
-      console.error('Slack post error: ', error);
+      this.logger.error('Slack post error:', error);
     }
   }
 }
