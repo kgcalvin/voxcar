@@ -37,7 +37,7 @@ export class ScraperService {
     private readonly slackService: SlackService,
     private readonly configService: ConfigService,
   ) {}
-  async processScrapedCars(jobId: string): Promise<void> {
+  async processScrapedCars(jobId: string, siteMapId: string): Promise<void> {
     try {
       // Fetch scraped data from webscraper.io
       const response = await axios.get<string>(
@@ -60,10 +60,10 @@ export class ScraperService {
       const processedCars = this._cleanScrapedData(parsed, jobId);
 
       // Handle deduplication and inactive cars
-      void this._handleCarDeactivation(processedCars, jobId);
+      void this._handleCarDeactivation(processedCars, jobId, siteMapId);
 
       // Save to database
-      void this._saveProcessedCars(processedCars);
+      void this._saveProcessedCars(processedCars, siteMapId);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -115,8 +115,9 @@ export class ScraperService {
       void this.slackService.sendNotification(
         `⚠️ *Scraping Issues Detected*\n` +
           `*${carsFailedToProcess.length}* cars failed to process.\n` +
-          `*Affected URLs:*\n` +
+          `*Affected Listings:*(Limited to only 50 listings to avoid slack message size crashing. Please check the webscraper.io job with ID: *${jobId}* for details.\n` +
           carsFailedToProcess
+            .slice(0, 50)
             .map(
               (item: ScrapedCarData) =>
                 `• <${item.listing_url}|${item.make || 'Unknown'} ${item.model || ''}>`,
@@ -130,9 +131,10 @@ export class ScraperService {
     if (carsWithNoImages.length > 0) {
       void this.slackService.sendNotification(
         `📸 *Missing Images Alert*\n` +
-          `*${carsWithNoImages.length}* cars were scraped without images.\n` +
-          `*Affected Listings:*\n` +
+          `*${carsWithNoImages.length} out of ${validCars.length} cars were scraped without images.\n` +
+          `*Affected Listings:*(Limited to only 50 listings to avoid slack message size crashing. Please check the webscraper.io job with ID: *${jobId}* for details.\n` +
           carsWithNoImages
+            .slice(0, 50)
             .map(
               (item: ScrapedCarData) =>
                 `• <${item.listing_url}|${item.make || 'Unknown'} ${item.model || ''}>`,
@@ -178,23 +180,11 @@ export class ScraperService {
   private async _handleCarDeactivation(
     processedCars: Partial<CarListing>[],
     jobId: string,
+    siteMapId: string,
   ): Promise<void> {
-    // Get all current active listings for the make
-
-    const make = processedCars[0].make;
-    const condition = processedCars[0].condition;
-    const location = processedCars[0].location;
-    if (!make || !condition || !location) {
-      throw new Error(
-        `Deduplication failed Please verify scraping Job ${jobId}. on webscraper.io.`,
-      );
-    }
-
-    const currentListings = await this.carsService.findActiveExistingCars(
-      make,
-      condition,
-      location,
-    );
+    // Get all current active listings for the Listing website using sitemap Id
+    const currentListings =
+      await this.carsService.findActiveExistingCars(siteMapId);
     const newUrls = new Set(processedCars.map((car) => car.listing_url));
 
     // Find cars that are no longer in the scraped data
@@ -219,6 +209,22 @@ export class ScraperService {
     for (const car of carsToDeactivate) {
       await this.carsService.update(car.id, { isActive: false });
     }
+    if (carsToDeactivate.length) {
+      void this.slackService.sendNotification(
+        `⚠️ *Scraping Issues Detected*\n` +
+          `*${carsToDeactivate.length}* cars are no longer avaliable on listing site.\n` +
+          `*Deactivated Listings:* (Limited to only 50 listings to avoid slack message size crashing.)\n` +
+          carsToDeactivate
+            .slice(0, 50)
+            .map(
+              (item: Partial<CarListing>) =>
+                `• <${item.listing_url}|${item.make || 'Unknown'} ${item.model || ''}>`,
+            )
+            .join('\n') +
+          '\n\n' +
+          `Please check the webscraper.io job with ID: *${jobId}* for details.`,
+      );
+    }
 
     // Log deduplication results
     this.logger.log(
@@ -226,7 +232,10 @@ export class ScraperService {
     );
   }
 
-  private async _saveProcessedCars(cars: Partial<CarListing>[]): Promise<void> {
+  private async _saveProcessedCars(
+    cars: Partial<CarListing>[],
+    sitemap_id: string,
+  ): Promise<void> {
     for (const car of cars) {
       try {
         if (!car.listing_url) continue;
@@ -242,7 +251,10 @@ export class ScraperService {
           });
         } else {
           // Create new car
-          await this.carsService.create(car);
+          await this.carsService.create({
+            ...car,
+            sitemap_id,
+          });
         }
       } catch (error) {
         this.logger.error(`Error saving car:`, error);

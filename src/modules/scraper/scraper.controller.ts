@@ -4,7 +4,7 @@ import { ScraperService } from './scraper.service';
 interface WebhookPayload {
   scrapingjob_id?: string;
   status?: string;
-  sitemap_idstring;
+  sitemap_id: string;
   sitemap_name: string;
 }
 
@@ -24,7 +24,10 @@ export class ScraperController {
 
     if (payload.status === 'finished' && payload.scrapingjob_id) {
       try {
-        await this.scraperService.processScrapedCars(payload.scrapingjob_id);
+        await this.scraperService.processScrapedCars(
+          payload.scrapingjob_id,
+          payload.sitemap_id,
+        );
         return { message: 'Data recieved successfully' };
       } catch (error) {
         this.logger.error(`Error processing webhook data:`, error);

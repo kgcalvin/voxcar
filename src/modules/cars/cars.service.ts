@@ -14,6 +14,33 @@ interface PaginatedResponse<T> {
 
 @Injectable()
 export class CarsService {
+  private readonly selectConfig = {
+    id: true,
+    make: true,
+    model: true,
+    year: true,
+    type: true,
+    fuel_type: true,
+    transmission: true,
+    price: true,
+    mileage: true,
+    engine: true,
+    cylinders: true,
+    drive_train: true,
+    exterior: true,
+    interior: true,
+    isActive: true,
+    listing_url: true,
+    description: true,
+    location: true,
+    condition: true,
+    image_urls: true,
+    vin: true,
+    created_at: true,
+    updated_at: true,
+    sitemap_id: true,
+  };
+
   constructor(
     @InjectRepository(CarListing)
     private readonly carListingRepository: Repository<CarListing>,
@@ -36,29 +63,7 @@ export class CarsService {
     if (filters.type) where.type = filters.type;
 
     const [cars, total] = await this.carListingRepository.findAndCount({
-      select: {
-        id: true,
-        make: true,
-        model: true,
-        year: true,
-        type: true,
-        fuel_type: true,
-        transmission: true,
-        price: true,
-        mileage: true,
-        engine: true,
-        cylinders: true,
-        drive_train: true,
-        exterior: true,
-        interior: true,
-        isActive: true,
-        listing_url: true,
-        description: true,
-        location: true,
-        condition: true,
-        image_urls: true,
-        vin: true,
-      },
+      select: this.selectConfig,
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -73,39 +78,13 @@ export class CarsService {
     };
   }
 
-  async findActiveExistingCars(
-    make: string,
-    location: string,
-    condition: string,
-  ): Promise<CarListing[]> {
+  async findActiveExistingCars(sitemap_id: string): Promise<CarListing[]> {
     return this.carListingRepository.find({
       select: {
-        id: true,
-        make: true,
-        model: true,
-        year: true,
-        type: true,
-        fuel_type: true,
-        transmission: true,
-        price: true,
-        mileage: true,
-        engine: true,
-        cylinders: true,
-        drive_train: true,
-        exterior: true,
-        interior: true,
-        isActive: true,
-        listing_url: true,
-        description: true,
-        location: true,
-        condition: true,
-        image_urls: true,
-        vin: true,
+        ...this.selectConfig,
       },
       where: {
-        make,
-        condition,
-        location,
+        sitemap_id,
         isActive: true,
       },
     });
@@ -113,29 +92,7 @@ export class CarsService {
 
   async findByListingUrl(listing_url: string): Promise<CarListing | null> {
     return this.carListingRepository.findOne({
-      select: {
-        id: true,
-        make: true,
-        model: true,
-        year: true,
-        type: true,
-        fuel_type: true,
-        transmission: true,
-        price: true,
-        mileage: true,
-        engine: true,
-        cylinders: true,
-        drive_train: true,
-        exterior: true,
-        interior: true,
-        isActive: true,
-        listing_url: true,
-        description: true,
-        location: true,
-        condition: true,
-        image_urls: true,
-        vin: true,
-      },
+      select: this.selectConfig,
       where: { listing_url },
     });
   }
@@ -148,29 +105,7 @@ export class CarsService {
   async update(id: string, carData: Partial<CarListing>): Promise<CarListing> {
     await this.carListingRepository.update(id, carData);
     const updatedCar = await this.carListingRepository.findOne({
-      select: {
-        id: true,
-        make: true,
-        model: true,
-        year: true,
-        type: true,
-        fuel_type: true,
-        transmission: true,
-        price: true,
-        mileage: true,
-        engine: true,
-        cylinders: true,
-        drive_train: true,
-        exterior: true,
-        interior: true,
-        isActive: true,
-        listing_url: true,
-        description: true,
-        location: true,
-        condition: true,
-        image_urls: true,
-        vin: true,
-      },
+      select: this.selectConfig,
       where: { id },
     });
     if (!updatedCar) {
@@ -181,29 +116,7 @@ export class CarsService {
 
   async findOne(id: string): Promise<CarListing> {
     const car = await this.carListingRepository.findOne({
-      select: {
-        id: true,
-        make: true,
-        model: true,
-        year: true,
-        type: true,
-        fuel_type: true,
-        transmission: true,
-        price: true,
-        mileage: true,
-        engine: true,
-        cylinders: true,
-        drive_train: true,
-        exterior: true,
-        interior: true,
-        isActive: true,
-        listing_url: true,
-        description: true,
-        location: true,
-        condition: true,
-        image_urls: true,
-        vin: true,
-      },
+      select: this.selectConfig,
       where: { id },
     });
 
