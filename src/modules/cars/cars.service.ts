@@ -132,8 +132,9 @@ export class CarsService {
     types: string[];
     makes: string[];
     years: string[];
+    modelsByMake: { [key: string]: string[] };
   }> {
-    const [locations, types, makes, years] = await Promise.all([
+    const [locations, types, makes, years, models] = await Promise.all([
       this.carListingRepository
         .createQueryBuilder('car')
         .select('DISTINCT car.location', 'location')
@@ -154,7 +155,26 @@ export class CarsService {
         .select('DISTINCT car.year', 'year')
         .where('car.isActive = :isActive', { isActive: true })
         .getRawMany(),
+      this.carListingRepository
+        .createQueryBuilder('car')
+        .select('car.make', 'make')
+        .addSelect('car.model', 'model')
+        .where('car.isActive = :isActive', { isActive: true })
+        .getRawMany(),
     ]);
+
+    // Group models by make
+    const modelsByMake: { [key: string]: string[] } = {};
+    models.forEach((item: { make: string; model: string }) => {
+      if (item.make && item.model) {
+        if (!modelsByMake[item.make]) {
+          modelsByMake[item.make] = [];
+        }
+        if (!modelsByMake[item.make].includes(item.model)) {
+          modelsByMake[item.make].push(item.model);
+        }
+      }
+    });
 
     return {
       locations: locations
@@ -163,6 +183,7 @@ export class CarsService {
       types: types.map((t: { type: string }) => t.type).filter(Boolean),
       makes: makes.map((m: { make: string }) => m.make).filter(Boolean),
       years: years.map((y: { year: string }) => y.year).filter(Boolean),
+      modelsByMake,
     };
   }
 }

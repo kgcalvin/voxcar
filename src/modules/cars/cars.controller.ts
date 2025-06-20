@@ -28,6 +28,7 @@ export class CarsController {
     types: string[];
     makes: string[];
     years: string[];
+    modelsByMake: { [key: string]: string[] };
   }> {
     return this.carsService.getUniqueFilters();
   }
