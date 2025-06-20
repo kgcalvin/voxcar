@@ -61,6 +61,7 @@ export class CarsService {
     if (filters.make) where.make = filters.make;
     if (filters.location) where.location = filters.location;
     if (filters.type) where.type = filters.type;
+    if (filters.model) where.model = filters.model;
 
     const [cars, total] = await this.carListingRepository.findAndCount({
       select: this.selectConfig,

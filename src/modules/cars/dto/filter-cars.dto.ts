@@ -8,4 +8,5 @@ export class FilterCarsDto {
   make?: string;
   location?: string;
   type?: string;
+  model?: string;
 }
