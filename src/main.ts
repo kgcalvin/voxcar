@@ -9,6 +9,8 @@ async function bootstrap() {
       'http://localhost:3000',
       'https://voxcar-7b14f.web.app',
       'https://voxcar-fe-ska6.vercel.app',
+      'https://voxcar-fe-b25k.vercel.app',
+      'https://voxcar-fe-gamma.vercel.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: '*',
