@@ -1,0 +1,77 @@
+/* Car Description Styling */
+.car-description {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  max-width: 100%;
+}
+
+.car-description h3 {
+  color: #2c3e50;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.75rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #3498db;
+}
+
+.car-description h3:first-child {
+  margin-top: 0;
+}
+
+.car-description p {
+  margin: 0.75rem 0;
+  text-align: justify;
+}
+
+.car-description ul {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.car-description li {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
+
+.car-description strong {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.car-description em {
+  font-style: italic;
+  color: #7f8c8d;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .car-description h3 {
+    font-size: 1.1rem;
+  }
+
+  .car-description {
+    font-size: 0.95rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .car-description {
+    color: #e1e1e1;
+  }
+
+  .car-description h3 {
+    color: #3498db;
+    border-bottom-color: #3498db;
+  }
+
+  .car-description strong {
+    color: #3498db;
+  }
+
+  .car-description em {
+    color: #bdc3c7;
+  }
+}

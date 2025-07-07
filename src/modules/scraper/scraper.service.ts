@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CarsService } from '../cars/cars.service';
 import { CarListing } from '../../database/car-listing.entity';
 import { SlackService } from '../../common/services/slack.service';
+import { AiService } from '../../common/services/ai.service';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 
@@ -36,6 +37,7 @@ export class ScraperService {
     private readonly carsService: CarsService,
     private readonly slackService: SlackService,
     private readonly configService: ConfigService,
+    private readonly aiService: AiService,
   ) {}
   async processScrapedCars(jobId: string, siteMapId: string): Promise<void> {
     try {
@@ -57,7 +59,7 @@ export class ScraperService {
       }
 
       // Process data to make it compatible with CarListing schema
-      const processedCars = this._cleanScrapedData(parsed, jobId);
+      const processedCars = await this._cleanScrapedData(parsed, jobId);
 
       // Handle deduplication and inactive cars
       void this._handleCarDeactivation(processedCars, jobId, siteMapId);
@@ -78,10 +80,10 @@ export class ScraperService {
     }
   }
 
-  private _cleanScrapedData(
+  private async _cleanScrapedData(
     data: ScrapedCarData[],
     jobId: string,
-  ): Partial<CarListing>[] {
+  ): Promise<Partial<CarListing>[]> {
     const processedCars: Partial<CarListing>[] = [];
     const carsFailedToProcess: ScrapedCarData[] = [];
     const carsWithNoImages: ScrapedCarData[] = [];
@@ -91,7 +93,7 @@ export class ScraperService {
 
     for (const item of validCars) {
       try {
-        const processedCar = this._mapToCarListingSchema(item);
+        const processedCar = await this._mapToCarListingSchema(item);
         if (processedCar && processedCar.image_urls!.length == 0) {
           carsWithNoImages.push(item);
           this.logger.log(
@@ -148,11 +150,27 @@ export class ScraperService {
     return processedCars;
   }
 
-  private _mapToCarListingSchema(data: ScrapedCarData): Partial<CarListing> {
+  private async _mapToCarListingSchema(
+    data: ScrapedCarData,
+  ): Promise<Partial<CarListing>> {
     const currentYear = new Date().getFullYear();
     const carYear = parseInt(data.year || '0');
     const condition =
       carYear >= currentYear - 1 ? data.condition?.toUpperCase() : 'USED';
+
+    // Process description through AI service
+    let processedDescription = data.description || '';
+    if (data.description) {
+      try {
+        processedDescription = await this.aiService.processCarDescription(
+          data.description,
+        );
+      } catch (error) {
+        this.logger.error('Error processing description with AI:', error);
+        // Fallback to raw description if AI processing fails
+        processedDescription = data.description;
+      }
+    }
 
     return {
       make: data.make?.toUpperCase(),
@@ -167,7 +185,7 @@ export class ScraperService {
       exterior: data.exterior,
       interior: data.interior,
       listing_url: data.listing_url,
-      description: data.description,
+      description: processedDescription,
       location: data.location?.toUpperCase(),
       image_urls: data.image_urls ? data.image_urls.split('|') : [],
       vin: data.vin,
