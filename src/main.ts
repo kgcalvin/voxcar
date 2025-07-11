@@ -6,6 +6,7 @@ async function bootstrap() {
   // Configure CORS
   app.enableCors({
     origin: [
+      'http://localhost:3001',
       'http://localhost:3000',
       'https://voxcar-7b14f.web.app',
       'https://voxcar-fe-ska6.vercel.app',
