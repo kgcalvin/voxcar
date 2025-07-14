@@ -12,7 +12,7 @@ async function bootstrap() {
       'https://voxcar-fe-ska6.vercel.app',
       'https://voxcar-fe-b25k.vercel.app',
       'https://voxcar-fe-gamma.vercel.app',
-      'https://voxcar-fe-flax.vercel.app/to',
+      'https://voxcar-fe-flax.vercel.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: '*',
