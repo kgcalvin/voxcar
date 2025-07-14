@@ -81,88 +81,6 @@ export class NlpService implements OnModuleInit {
         }
       }
 
-      /*this.manager.addDocument('en', 'powerful engine', 'feature.performance');
-      this.manager.addDocument('en', 'turbocharged', 'feature.performance');
-      this.manager.addDocument(
-        'en',
-        'smooth automatic transmission',
-        'feature.performance',
-      );
-      this.manager.addDocument('en', 'sport mode', 'feature.performance');
-      this.manager.addDocument(
-        'en',
-        'quick acceleration',
-        'feature.performance',
-      );
-      this.manager.addDocument('en', 'high horsepower', 'feature.performance');
-      this.manager.addDocument('en', 'transmission', 'feature.performance');
-      this.manager.addDocument('en', 'acceleration', 'feature.performance');
-      this.manager.addDocument('en', 'handling', 'feature.performance');
-      this.manager.addDocument('en', 'top speed', 'feature.performance');
-      this.manager.addDocument('en', 'driving modes', 'feature.performance');
-
-      this.manager.addDocument('en', 'airbags', 'feature.safety');
-      this.manager.addDocument('en', 'ABS brakes', 'feature.safety');
-      this.manager.addDocument('en', 'traction control', 'feature.safety');
-      this.manager.addDocument('en', 'blind-spot monitoring', 'feature.safety');
-      this.manager.addDocument('en', 'rearview camera', 'feature.safety');
-
-      this.manager.addDocument('en', 'leather seats', 'feature.comfort');
-      this.manager.addDocument('en', 'heated seats', 'feature.comfort');
-      this.manager.addDocument('en', 'climate control', 'feature.comfort');
-      this.manager.addDocument('en', 'keyless entry', 'feature.comfort');
-      this.manager.addDocument('en', 'spacious interior', 'feature.comfort');
-
-      this.manager.addDocument('en', 'fuel efficiency', 'feature.economy');
-      this.manager.addDocument('en', 'good mileage', 'feature.economy');
-      this.manager.addDocument('en', 'low fuel consumption', 'feature.economy');
-      this.manager.addDocument('en', 'eco-friendly', 'feature.economy');
-      this.manager.addDocument('en', 'low running cost', 'feature.economy');
-      this.manager.addDocument('en', 'high mpg', 'feature.economy');
-
-      this.manager.addDocument('en', 'hybrid system', 'feature.economy');
-      this.manager.addDocument('en', 'hybrid engine', 'feature.economy');
-      this.manager.addDocument('en', 'plug-in hybrid', 'feature.economy');
-      this.manager.addDocument('en', 'electric assist', 'feature.economy');
-      this.manager.addDocument('en', 'low running cost', 'feature.economy');
-      this.manager.addDocument('en', 'regenerative braking', 'feature.economy');
-
-      this.manager.addDocument('en', 'emissions', 'feature.economy');
-      this.manager.addDocument('en', 'Euro 6', 'feature.economy');
-      this.manager.addDocument('en', 'green car', 'feature.economy');
-      this.manager.addDocument('en', 'low CO2', 'feature.economy');
-      this.manager.addDocument(
-        'en',
-        'environmental compliance',
-        'feature.economy',
-      );
-      this.manager.addDocument(
-        'en',
-        'low carbondioxide emission',
-        'feature.economy',
-      );
-
-      this.manager.addDocument(
-        'en',
-        'touchscreen display',
-        'feature.technology',
-      );
-      this.manager.addDocument('en', 'navigation system', 'feature.technology');
-      this.manager.addDocument(
-        'en',
-        'Bluetooth connectivity',
-        'feature.technology',
-      );
-      this.manager.addDocument('en', 'Apple CarPlay', 'feature.technology');
-      this.manager.addDocument(
-        'en',
-        'premium sound system',
-        'feature.technology',
-      );
-
-      this.manager.addDocument('en', 'transmission', 'feature.performance');
-      */
-
       // --- Add Named Entities (NER) ---
       // This is the core for extracting specific features.
       for (const [entityType, features] of Object.entries(entityGroups)) {
@@ -199,7 +117,7 @@ export class NlpService implements OnModuleInit {
       comfort: [],
       technology: [],
       exterior: [],
-      interior_trim: [],
+      'interior trim': [],
       economy: [],
       drivetrain: [],
       certification: [],
@@ -236,7 +154,7 @@ export class NlpService implements OnModuleInit {
           comfort_feature: 'comfort',
           technology_feature: 'technology',
           exterior_feature: 'exterior',
-          interior_trim_feature: 'interior_trim',
+          interior_trim_feature: 'interior trim',
           economy: 'economy',
           drivetrain: 'drivetrain',
           certification: 'certification',
@@ -261,7 +179,7 @@ export class NlpService implements OnModuleInit {
       // Optionally, if the overall intent is strong but few entities were found,
       // you could add the whole description to that group, or try more advanced parsing.
       // For this example, we're focusing on extracted entities.
-      console.log('topIntentScore', topIntentScore);
+      // console.log('topIntentScore', topIntentScore);
     }
 
     return {
