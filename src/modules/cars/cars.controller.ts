@@ -2,6 +2,7 @@ import { Controller, Get, Query, Param } from '@nestjs/common';
 import { CarsService } from './cars.service';
 import { CarListing } from '../../database/car-listing.entity';
 import { FilterCarsDto } from './dto/filter-cars.dto';
+import { NlpService } from './nlp.service';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -13,7 +14,10 @@ interface PaginatedResponse<T> {
 
 @Controller('cars')
 export class CarsController {
-  constructor(private readonly carsService: CarsService) {}
+  constructor(
+    private readonly carsService: CarsService,
+    private readonly nlpService: NlpService,
+  ) {}
 
   @Get()
   async findAll(
@@ -34,7 +38,14 @@ export class CarsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<CarListing> {
-    return this.carsService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+  ): Promise<CarListing & { groupedFeatures: { [x: string]: string[] } }> {
+    const carListing = await this.carsService.findOne(id);
+    const groups = await this.nlpService.extractFeatureGroups(carListing);
+    return {
+      ...carListing,
+      groupedFeatures: groups.groupedFeatures,
+    };
   }
 }

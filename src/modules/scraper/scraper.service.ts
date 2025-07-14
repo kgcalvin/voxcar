@@ -159,18 +159,18 @@ export class ScraperService {
       carYear >= currentYear - 1 ? data.condition?.toUpperCase() : 'USED';
 
     // Process description through AI service
-    let processedDescription = data.description || '';
-    if (data.description) {
-      try {
-        processedDescription = await this.aiService.processCarDescription(
-          data.description,
-        );
-      } catch (error) {
-        this.logger.error('Error processing description with AI:', error);
-        // Fallback to raw description if AI processing fails
-        processedDescription = data.description;
-      }
-    }
+    // let processedDescription = data.description || '';
+    // if (data.description) {
+    //   try {
+    //     processedDescription = await this.aiService.processCarDescription(
+    //       data.description,
+    //     );
+    //   } catch (error) {
+    //     this.logger.error('Error processing description with AI:', error);
+    //     // Fallback to raw description if AI processing fails
+    //     processedDescription = data.description;
+    //   }
+    // }
 
     return {
       make: data.make?.toUpperCase(),
@@ -185,7 +185,7 @@ export class ScraperService {
       exterior: data.exterior,
       interior: data.interior,
       listing_url: data.listing_url,
-      description: processedDescription,
+      description: data.description,
       location: data.location?.toUpperCase(),
       image_urls: data.image_urls ? data.image_urls.split('|') : [],
       vin: data.vin,
