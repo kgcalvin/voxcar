@@ -85,6 +85,8 @@ export async function addGroupedFeaturesToExistingCars() {
     logger.log(`Total cars processed: ${processedCount}`);
     logger.log(`Cars updated: ${updatedCount}`);
     logger.log(`Errors encountered: ${errorCount}`);
+
+    await app.close();
   } catch (error) {
     logger.error('Fatal error in addGroupedFeaturesToExistingCars:', error);
     process.exit(1);

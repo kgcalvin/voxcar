@@ -42,10 +42,9 @@ export class CarsController {
     @Param('id') id: string,
   ): Promise<CarListing & { groupedFeatures: { [x: string]: string[] } }> {
     const carListing = await this.carsService.findOne(id);
-    const groups = await this.nlpService.extractFeatureGroups(carListing);
     return {
       ...carListing,
-      groupedFeatures: groups.groupedFeatures,
+      groupedFeatures: carListing.grouped_features,
     };
   }
 }
