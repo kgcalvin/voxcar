@@ -3,6 +3,7 @@ import { CarsService } from '../cars/cars.service';
 import { CarListing } from '../../database/car-listing.entity';
 import { SlackService } from '../../common/services/slack.service';
 import { AiService } from '../../common/services/ai.service';
+import { NlpService } from '../cars/nlp.service';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 
@@ -38,9 +39,18 @@ export class ScraperService {
     private readonly slackService: SlackService,
     private readonly configService: ConfigService,
     private readonly aiService: AiService,
+    private readonly nlpService: NlpService,
   ) {}
   async processScrapedCars(jobId: string, siteMapId: string): Promise<void> {
     try {
+      // Initialize NLP service if not already initialized
+      if (!this.nlpService.manager) {
+        this.logger.log(
+          'Initializing NLP service for grouped features extraction...',
+        );
+        await this.nlpService.initializeNlpManager();
+      }
+
       // Fetch scraped data from webscraper.io
       const response = await axios.get<string>(
         `https://api.webscraper.io/api/v1/scraping-job/${jobId}/json?api_token=${this.configService.get('SCRAPER_API_TOKEN')}`,
@@ -158,19 +168,90 @@ export class ScraperService {
     const condition =
       carYear >= currentYear - 1 ? data.condition?.toUpperCase() : 'USED';
 
-    // Process description through AI service
-    // let processedDescription = data.description || '';
-    // if (data.description) {
-    //   try {
-    //     processedDescription = await this.aiService.processCarDescription(
-    //       data.description,
-    //     );
-    //   } catch (error) {
-    //     this.logger.error('Error processing description with AI:', error);
-    //     // Fallback to raw description if AI processing fails
-    //     processedDescription = data.description;
-    //   }
-    // }
+    // Process grouped features using NLP service
+    let groupedFeatures:
+      | {
+          performance: string[];
+          safety: string[];
+          comfort: string[];
+          technology: string[];
+          exterior: string[];
+          interior_trim: string[];
+          economy: string[];
+          drivetrain: string[];
+          certification: string[];
+        }
+      | undefined = undefined;
+
+    if (data.description) {
+      try {
+        // Create a minimal car object for NLP processing
+        const tempCar = {
+          id: 'temp',
+          description: data.description,
+          make: data.make || '',
+          model: data.model || '',
+          year: data.year || '',
+          mileage: data.mileage || '',
+          price: data.price || '',
+          type: data.type || '',
+          fuel_type: data.fuel_type || '',
+          transmission: data.transmission || '',
+          engine: data.engine || '',
+          cylinders: data.cylinders || '',
+          drive_train: data.drive_train || '',
+          exterior: data.exterior || '',
+          interior: data.interior || '',
+          isActive: true,
+          listing_url: data.listing_url || '',
+          location: data.location || '',
+          condition: condition,
+          image_urls: [],
+          vin: data.vin || '',
+          sitemap_id: '',
+          grouped_features: undefined,
+          created_at: new Date(),
+          updated_at: new Date(),
+        } as unknown as CarListing;
+
+        const nlpResult = await this.nlpService.extractFeatureGroups(tempCar);
+        groupedFeatures = nlpResult.groupedFeatures;
+
+        if (groupedFeatures) {
+          const features = groupedFeatures as {
+            performance: string[];
+            safety: string[];
+            comfort: string[];
+            technology: string[];
+            exterior: string[];
+            interior_trim: string[];
+            economy: string[];
+            drivetrain: string[];
+            certification: string[];
+          };
+          const featureCount = Object.values(features).filter(
+            (arr) => arr.length > 0,
+          ).length;
+          this.logger.log(
+            `✅ Extracted grouped features for ${data.make} ${data.model}: ${featureCount} categories with features`,
+          );
+        }
+      } catch (error) {
+        this.logger.error('Error processing grouped features with NLP:', error);
+        // Fallback to empty grouped features if NLP processing fails
+        groupedFeatures = {
+          performance: [],
+          safety: [],
+          comfort: [],
+          technology: [],
+          exterior: [],
+          interior_trim: [],
+          economy: [],
+          drivetrain: [],
+          certification: [],
+        };
+      }
+    }
 
     return {
       make: data.make?.toUpperCase(),
@@ -192,6 +273,7 @@ export class ScraperService {
       condition: condition,
       drive_train: data.drive_train,
       fuel_type: data.fuel_type,
+      grouped_features: groupedFeatures,
     };
   }
 
