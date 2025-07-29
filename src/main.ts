@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { addGroupedFeaturesToExistingCars } from 'scripts/add-grouped-features';
 
 async function bootstrap() {
-  await addGroupedFeaturesToExistingCars();
+  void addGroupedFeaturesToExistingCars();
   const app = await NestFactory.create(AppModule);
   // Configure CORS
   app.enableCors({
