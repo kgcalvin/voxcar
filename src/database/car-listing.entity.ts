@@ -68,6 +68,19 @@ export class CarListing {
   @Column('simple-array')
   image_urls: string[];
 
+  @Column('json', { nullable: true })
+  grouped_features: {
+    performance: string[];
+    safety: string[];
+    comfort: string[];
+    technology: string[];
+    exterior: string[];
+    interior_trim: string[];
+    economy: string[];
+    drivetrain: string[];
+    certification: string[];
+  };
+
   // Additional fields That are unique for particular makes
 
   @Column()

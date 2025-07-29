@@ -39,6 +39,7 @@ export class CarsService {
     created_at: true,
     updated_at: true,
     sitemap_id: true,
+    grouped_features: true,
   };
 
   constructor(
@@ -186,5 +187,18 @@ export class CarsService {
       years: years.map((y: { year: string }) => y.year).filter(Boolean),
       modelsByMake,
     };
+  }
+
+  async getTotalCount(): Promise<number> {
+    return this.carListingRepository.count();
+  }
+
+  async getCarsBatch(offset: number, limit: number): Promise<CarListing[]> {
+    return this.carListingRepository.find({
+      select: this.selectConfig,
+      skip: offset,
+      take: limit,
+      order: { created_at: 'ASC' }, // Process oldest first
+    });
   }
 }
