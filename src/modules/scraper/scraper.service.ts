@@ -160,7 +160,7 @@ export class ScraperService {
     return processedCars;
   }
 
-  private async _mapToCarListingSchema(
+  private _mapToCarListingSchema(
     data: ScrapedCarData,
   ): Promise<Partial<CarListing>> {
     const currentYear = new Date().getFullYear();
@@ -214,8 +214,8 @@ export class ScraperService {
           updated_at: new Date(),
         } as unknown as CarListing;
 
-        const nlpResult = await this.nlpService.extractFeatureGroups(tempCar);
-        groupedFeatures = nlpResult.groupedFeatures;
+        // const nlpResult = await this.nlpService.extractFeatureGroups(tempCar);
+        // groupedFeatures = nlpResult.groupedFeatures;
 
         if (groupedFeatures) {
           const features = groupedFeatures as {
@@ -273,7 +273,6 @@ export class ScraperService {
       condition: condition,
       drive_train: data.drive_train,
       fuel_type: data.fuel_type,
-      grouped_features: groupedFeatures,
     };
   }
 
