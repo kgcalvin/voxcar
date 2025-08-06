@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere, Like } from 'typeorm';
 import { CarListing } from '../../database/car-listing.entity';
 import { FilterCarsDto } from './dto/filter-cars.dto';
 
@@ -199,6 +199,56 @@ export class CarsService {
       skip: offset,
       take: limit,
       order: { created_at: 'ASC' }, // Process oldest first
+    });
+  }
+
+  async getAudiUsedCars(): Promise<CarListing[]> {
+    return this.carListingRepository.find({
+      select: this.selectConfig,
+      where: {
+        make: 'AUDI',
+        condition: 'USED',
+      },
+      order: { created_at: 'ASC' },
+    });
+  }
+
+  async getCarsWithNotFoundImages(): Promise<CarListing[]> {
+    return this.carListingRepository.find({
+      select: this.selectConfig,
+      where: {
+        image_urls: Like('%notfound.jpg%'),
+      },
+      order: { created_at: 'ASC' },
+    });
+  }
+
+  async delete(id: string): Promise<void> {
+    const result = await this.carListingRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Car with ID ${id} not found`);
+    }
+  }
+
+  async getFordNewCars(): Promise<CarListing[]> {
+    return this.carListingRepository.find({
+      select: this.selectConfig,
+      where: {
+        make: 'FORD',
+        condition: 'NEW',
+      },
+      order: { created_at: 'ASC' },
+    });
+  }
+
+  async getFordCarsWithUnavailableImages(): Promise<CarListing[]> {
+    return this.carListingRepository.find({
+      select: this.selectConfig,
+      where: {
+        make: 'FORD',
+        image_urls: Like('%photo_unavailable_640.png%'),
+      },
+      order: { created_at: 'ASC' },
     });
   }
 }

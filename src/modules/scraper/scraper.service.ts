@@ -69,7 +69,7 @@ export class ScraperService {
       }
 
       // Process data to make it compatible with CarListing schema
-      const processedCars = await this._cleanScrapedData(parsed, jobId);
+      const processedCars = this._cleanScrapedData(parsed, jobId);
 
       // Handle deduplication and inactive cars
       void this._handleCarDeactivation(processedCars, jobId, siteMapId);
@@ -90,20 +90,23 @@ export class ScraperService {
     }
   }
 
-  private async _cleanScrapedData(
+  private _cleanScrapedData(
     data: ScrapedCarData[],
     jobId: string,
-  ): Promise<Partial<CarListing>[]> {
+  ): Partial<CarListing>[] {
     const processedCars: Partial<CarListing>[] = [];
     const carsFailedToProcess: ScrapedCarData[] = [];
     const carsWithNoImages: ScrapedCarData[] = [];
+    const carsWithNotFoundImages: ScrapedCarData[] = [];
 
     // Filter out cars without listing_url first
     const validCars = data.filter((car) => car.listing_url && car.year);
 
     for (const item of validCars) {
       try {
-        const processedCar = await this._mapToCarListingSchema(item);
+        const processedCar = this._mapToCarListingSchema(item);
+
+        // Check if car has no images
         if (processedCar && processedCar.image_urls!.length == 0) {
           carsWithNoImages.push(item);
           this.logger.log(
@@ -111,6 +114,23 @@ export class ScraperService {
           );
           continue;
         }
+
+        // Check if car has notfound.jpg images
+        if (
+          processedCar &&
+          processedCar.image_urls!.some(
+            (url) =>
+              url.includes('notfound.jpg') ||
+              url.includes('photo_unavailable_640.png'),
+          )
+        ) {
+          carsWithNotFoundImages.push(item);
+          this.logger.log(
+            `Skipping car with notfound.jpg images: ${item.make} ${item.model} (${item.listing_url})`,
+          );
+          continue;
+        }
+
         if (processedCar) {
           processedCars.push(processedCar);
         }
@@ -146,6 +166,23 @@ export class ScraperService {
           `*${carsWithNoImages.length} out of ${validCars.length} cars were scraped without images.\n` +
           `*Affected Listings:*(Limited to only 50 listings to avoid slack message size crashing. Please check the webscraper.io job with ID: *${jobId}* for details.\n` +
           carsWithNoImages
+            .slice(0, 50)
+            .map(
+              (item: ScrapedCarData) =>
+                `• <${item.listing_url}|${item.make || 'Unknown'} ${item.model || ''}>`,
+            )
+            .join('\n') +
+          '\n\n' +
+          `Please check the webscraper.io job with ID: *${jobId}* for details.`,
+      );
+    }
+
+    if (carsWithNotFoundImages.length > 0) {
+      void this.slackService.sendNotification(
+        `🚫 *NotFound Images Filtered*\n` +
+          `*${carsWithNotFoundImages.length} out of ${validCars.length} cars were filtered due to notfound.jpg images.\n` +
+          `*Filtered Listings:*(Limited to only 50 listings to avoid slack message size crashing. Please check the webscraper.io job with ID: *${jobId}* for details.\n` +
+          carsWithNotFoundImages
             .slice(0, 50)
             .map(
               (item: ScrapedCarData) =>
