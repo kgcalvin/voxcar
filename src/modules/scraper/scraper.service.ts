@@ -105,8 +105,6 @@ export class ScraperService {
     for (const item of validCars) {
       try {
         const processedCar = this._mapToCarListingSchema(item);
-
-        // Check if car has no images
         if (processedCar && processedCar.image_urls!.length == 0) {
           carsWithNoImages.push(item);
           this.logger.log(
