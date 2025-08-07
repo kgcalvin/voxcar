@@ -3,8 +3,9 @@ import { AppModule } from '../src/app.module';
 import { CarsService } from '../src/modules/cars/cars.service';
 import { NlpService } from '../src/modules/cars/nlp.service';
 import { Logger } from '@nestjs/common';
+import * as cron from 'node-cron';
 
-export async function addGroupedFeaturesToExistingCars() {
+async function addGroupedFeaturesToExistingCars() {
   const logger = new Logger('AddGroupedFeatures');
 
   try {
@@ -93,13 +94,17 @@ export async function addGroupedFeaturesToExistingCars() {
   }
 }
 
-// Run the script
-addGroupedFeaturesToExistingCars()
-  .then(() => {
-    console.log('Script completed successfully');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('Script failed:', error);
-    process.exit(1);
+export function runAddGroupFeaturesCron() {
+  // Schedule the script to run at 8:00 AM every day
+  console.log('Scheduling grouped features update task for 23:00 AM daily...');
+  cron.schedule('0 11,23 * * *', async () => {
+    console.log('Starting scheduled grouped features update...');
+    await addGroupedFeaturesToExistingCars()
+      .then(() => {
+        console.log('Scheduled task completed successfully');
+      })
+      .catch((error) => {
+        console.error('Scheduled task failed:', error);
+      });
   });
+}

@@ -1,8 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { runAddGroupFeaturesCron } from 'scripts/add-grouped-features';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  runAddGroupFeaturesCron();
   // Configure CORS
   app.enableCors({
     origin: [
