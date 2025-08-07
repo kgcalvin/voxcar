@@ -96,8 +96,8 @@ async function addGroupedFeaturesToExistingCars() {
 
 export function runAddGroupFeaturesCron() {
   // Schedule the script to run at 8:00 AM every day
-  console.log('Scheduling grouped features update task for 8:00 AM daily...');
-  cron.schedule('0 8 * * *', async () => {
+  console.log('Scheduling grouped features update task for 23:00 AM daily...');
+  cron.schedule('0 11,23 * * *', async () => {
     console.log('Starting scheduled grouped features update...');
     await addGroupedFeaturesToExistingCars()
       .then(() => {
