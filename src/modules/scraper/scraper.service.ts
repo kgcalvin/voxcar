@@ -90,10 +90,10 @@ export class ScraperService {
     }
   }
 
-  private async _cleanScrapedData(
+  private _cleanScrapedData(
     data: ScrapedCarData[],
     jobId: string,
-  ): Promise<Partial<CarListing>[]> {
+  ): Partial<CarListing>[] {
     const processedCars: Partial<CarListing>[] = [];
     const carsFailedToProcess: ScrapedCarData[] = [];
     const carsWithNoImages: ScrapedCarData[] = [];
@@ -103,7 +103,7 @@ export class ScraperService {
 
     for (const item of validCars) {
       try {
-        const processedCar = await this._mapToCarListingSchema(item);
+        const processedCar = this._mapToCarListingSchema(item);
         if (processedCar && processedCar.image_urls!.length == 0) {
           carsWithNoImages.push(item);
           this.logger.log(

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere, IsNull } from 'typeorm';
 import { CarListing } from '../../database/car-listing.entity';
 import { FilterCarsDto } from './dto/filter-cars.dto';
 
@@ -190,12 +190,15 @@ export class CarsService {
   }
 
   async getTotalCount(): Promise<number> {
-    return this.carListingRepository.count();
+    return this.carListingRepository.count({
+      where: { grouped_features: IsNull() },
+    });
   }
 
   async getCarsBatch(offset: number, limit: number): Promise<CarListing[]> {
     return this.carListingRepository.find({
       select: this.selectConfig,
+      where: { grouped_features: IsNull() },
       skip: offset,
       take: limit,
       order: { created_at: 'ASC' }, // Process oldest first
